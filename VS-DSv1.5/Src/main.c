@@ -127,13 +127,6 @@ int main(void)
 	DS_HandingUartDataFromCoreBoard();
 	DS_HandingCoreBoardRequest();
 	DS_SendAckData();
-	HAL_Delay(10);
-	  if (1 == CoreBoardUsartType.RX_Flag)
-	  {
-		  CoreBoardUsartType.RX_Flag = 0;
-		  DS_SendDataToCoreBoard(CoreBoardUsartType.RX_pData, CoreBoardUsartType.RX_Size, 0xFFFF);
-	  }
-	//DS_SendDataToCoreBoard((uint8_t*)"\r\n welcome to STM32\r\n",25,0xFFFF);
 
   }
   /* USER CODE END 3 */

@@ -123,7 +123,7 @@ static uint8_t getXORCode(uint8_t* pData,uint16_t len)
   ret = pData[0];
   for(i = 1; i < len; i++)
   {
-    ret ^=pData[i];
+    ret ^= pData[i];
   }
   return ret;
 }
@@ -133,7 +133,7 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
   DS_StatusTypeDef state = DS_OK;
   uint8_t xorTemp;
   uint16_t i;
-  
+	
   /* 判断串口数据是否接收完成 */
   if(!(pUsartType->RX_Flag))
   {
@@ -141,15 +141,12 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
   }
   
   pUsartType->RX_Flag = 0;
-  
-  
+	
   /*  Handling the ACK Cmd */
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wparentheses"
-  if(0xA0 == (*((pUsartType->RX_pData) + 1)) & 0xF0)
-  #pragma GCC diagnostic pop
+  if(0xA0 == (*(pUsartType->RX_pData + 1) & 0xF0))
   {
-      if(pAckedData->AckCnt > 5)
+	  DS_SendDataToCoreBoard((uint8_t*)"\r\n Handling the ACK Cmd\r\n", 30, 0xFFFF);
+	  if(pAckedData->AckCnt > 5)
       {
         return state;
       }
@@ -215,17 +212,19 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
     }
     return state;
   }
+	
   
   if(0 == pRevData->TotalLength)
-  {
+  { 
     if(0x5B != *(pUsartType->RX_pData))
     {
-      return state;
+	    return state;
     }
+	  	  
     pRevData->CmdType      =*(pUsartType->RX_pData + 1);
     pRevData->CmdParam     =*(pUsartType->RX_pData + 2);
     
-    pRevData->DataLength   =(*(pUsartType->RX_pData + 3)) << 8 + *(pUsartType->RX_pData + 4);
+    pRevData->DataLength   =(*(pUsartType->RX_pData + 3)<< 8) + *(pUsartType->RX_pData + 4);
     
     if(0 == pRevData->DataLength)
     {
@@ -233,19 +232,22 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
       {
         return state;
       }
+	    
       pRevData->XOR8BIT         =*(pUsartType->RX_pData + 5);
       pRevData->TotalLength     = REQUESTFIXEDCOMMANDLEN;
-      xorTemp = getXORCode(pUsartType->RX_pData + 1, REQUESTFIXEDCOMMANDLEN - 3);
-      if(pRevData->XOR8BIT != xorTemp)
-      {
-        pRevData->TotalLength = 0;
-        return state;
-      }
-      pRevDataBuf[0]           = 0x5B;
-      pRevDataBuf[1]           = pRevData->CmdType;
-      pRevDataBuf[2]           = pRevData->CmdParam;
-      pRevDataBuf[3]           = *(pUsartType->RX_pData + 3);
-      pRevDataBuf[4]           = *(pUsartType->RX_pData + 4);
+	  pRevDataBuf[0]           = 0x5B;
+	  pRevDataBuf[1]           = pRevData->CmdType;
+	  pRevDataBuf[2]           = pRevData->CmdParam;
+	  pRevDataBuf[3]           = *(pUsartType->RX_pData + 3);
+	  pRevDataBuf[4]           = *(pUsartType->RX_pData + 4);
+	  xorTemp = getXORCode(pRevDataBuf + 1, REQUESTFIXEDCOMMANDLEN - 3);
+	  
+	  if((pRevData->XOR8BIT) != xorTemp)
+	  {
+	    pRevData->TotalLength = 0;
+	    return state;
+	  }
+
       pRevDataBuf[5]           = pRevData->XOR8BIT;
       pRevDataBuf[6]           = 0x5D;
       
@@ -265,8 +267,7 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
           pRevData->DataLength = 0;
           pRevData->NumberOfBytesReceived = 0;
           pRevData->TotalLength = 0;
-        }
-        
+        }        
         pRevData->XOR8BIT = *(pUsartType->RX_pData + i + 1 );
         pRevData->TotalLength = pRevData->DataLength + REQUESTFIXEDCOMMANDLEN;
         /* here to XOR check */
@@ -283,7 +284,6 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
         pRevDataBuf[2]           = pRevData->CmdParam;
         pRevDataBuf[3]           = *(pUsartType->RX_pData + 3);
         pRevDataBuf[4]           = *(pUsartType->RX_pData + 4);
-        
         pRevDataBuf[i + 1]           = pRevData->XOR8BIT;
         pRevDataBuf[i + 2]           = 0x5D;
         pRevData->RevOKFlag = 1;
@@ -376,9 +376,12 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
 {
   DS_StatusTypeDef state = DS_OK;
   uint8_t tempTableID;
+  //uint8_t tempBuf[512];
+	
   if(CoreBoardRevDataStruct.RevOKFlag)
   {
     tempTableID =  GetAvailableTableID();
+	  
     if(0xFF == tempTableID)
     {
       return state;
@@ -386,18 +389,18 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
     
     switch((CoreBoardRevDataStruct.CmdType) & 0xF0)
     {
+	    
     case 0xB0:sNeedToAckStruct.AckCmdCode[tempTableID] = 0xAB;
-              if(0xB2 == CoreBoardRevDataStruct.CmdType && 0x01 == CoreBoardRevDataStruct.CmdParam)
-              {
-                sNeedToAckStruct.AckCodeH[tempTableID] = 0x02;
-                SendOpenFlag.Flag = 1;
-                SendOpenFlag.position = tempTableID;//记录位置
-                Table.tab[tempTableID] = 0x01;//处理中
-              }
-              sNeedToAckStruct.DeviceType[tempTableID] = 0x01;
-              Table.tabCnt++;
-              break;
-              
+	    if (0xB2 == CoreBoardRevDataStruct.CmdType && 0x01 == CoreBoardRevDataStruct.CmdParam)
+	    {
+		    sNeedToAckStruct.AckCodeH[tempTableID] = 0x02;
+		    sNeedToAckStruct.DeviceType[tempTableID] = 0x01;
+		    SendOpenFlag.Flag = 1;
+		    SendOpenFlag.position = tempTableID;
+		    Table.tab[tempTableID] = 0x01;    //处理中
+		    Table.tabCnt++; break;		    
+	    }
+
     case 0xC0:sNeedToAckStruct.AckCmdCode[tempTableID] = 0xAC;//处理系统设置命令
               if(0xC1 == CoreBoardRevDataStruct.CmdType)//设置本机
               {
@@ -472,11 +475,23 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
               Table.tabCnt++;break;
     
     default: state = DS_NOCMD;break;
+	  
     }
-    
+	
+		
+  
+	CoreBoardRevDataStruct.NumberOfBytesReceived = 0;  
     CoreBoardRevDataStruct.DataLength  = 0;
     CoreBoardRevDataStruct.TotalLength = 0;
     CoreBoardRevDataStruct.RevOKFlag   = 0;
+	  
+	  if (SendOpenFlag.Flag)
+	  {
+		  DS_SendDataToLeftDoorBoard(CoreRevDataBuf, 7, 0xFFFF);
+		  DS_SendDataToRightDoorBoard(CoreRevDataBuf, 7, 0xFFFF);
+		  sNeedToAckStruct.AckCodeL[SendOpenFlag.position] = 0x00;
+		  Table.tab[SendOpenFlag.position] = 0x02;
+	  }
   }
   return state; 
 }
@@ -497,9 +512,60 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
 *******************************************************************************/
 DS_StatusTypeDef DS_HandingLeftDoorBoardRequest(void)
 {
-  DS_StatusTypeDef state = DS_OK;
+	DS_StatusTypeDef state = DS_OK;
+	uint8_t tempTableID;
+	if (LeftDoorBoardRevDataStruct.RevOKFlag)
+	{
+		tempTableID = GetAvailableTableID();
+		
+		if (0xFF == tempTableID)
+		{
+			return state;
+		}
+		switch ((LeftDoorBoardRevDataStruct.CmdType) & 0xF0)
+		{
+		case 0xB0:;break;
+		case 0xC0:;break;
+		case 0xD0:sNeedToAckStruct.AckCmdCode[tempTableID] = 0xAD; 
+			if (0xD2 == LeftDoorBoardRevDataStruct.CmdType)
+			{
+				sNeedToAckStruct.AckCodeH[tempTableID] = 0x02;
+				//写处理日志的标记位
+				
+			};
+			sNeedToAckStruct.DeviceType[tempTableID] = 0x02;
+			Table.tab[tempTableID] = 0x01;
+			Table.tabCnt++;
+			break;
+		case 0xE0:;break;
+			
+		default:
+			break;
+			
+		}
+	}
+	 return state;
+}
+
+/*******************************************************************************
+*
+*       Function        :DS_HandingRightDoorBoardRequest()
+*
+*       Input           :void
+*
+*       Return          :DS_StatusTypeDef
+*
+*       Description     :--
+*
+*
+*       Data            :2018/2/2
+*       Author          :bertz
+*******************************************************************************/
+DS_StatusTypeDef DS_HandingRightDoorBoardRequest(void)
+{
+	DS_StatusTypeDef state = DS_OK;
   
-  return state;
+	return state;
 }
 
 /*******************************************************************************
@@ -560,8 +626,6 @@ DS_StatusTypeDef DS_SendAckData(void)
 			Table.tabCnt--;
 		}
 	}
-	
-	
 	return state;
 }
 
