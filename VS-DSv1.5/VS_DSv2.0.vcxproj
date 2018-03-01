@@ -84,6 +84,9 @@
   <ItemGroup>
     <ClCompile Include="Src\ds_DataTransmissionLayer.c" />
     <ClCompile Include="Src\ds_FillLight.c" />
+    <ClCompile Include="Src\ds_gentlesensor.c" />
+    <ClCompile Include="Src\ds_led.c" />
+    <ClCompile Include="Src\ds_log.c" />
     <ClCompile Include="Src\ds_ProtocolLayer.c" />
     <ClCompile Include="Src\gpio.c" />
     <ClCompile Include="Src\adc.c" />

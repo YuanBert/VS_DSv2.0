@@ -47,13 +47,18 @@
 */
 /* Includes ------------------------------------------------------------------*/
 #include "ds_ProtocolLayer.h"
+#include "usart.h"
 
 extern USARTRECIVETYPE     CoreBoardUsartType;
 extern USARTRECIVETYPE     LeftDoorBoardUsartType;
 extern USARTRECIVETYPE     RightDoorBoardUsartType;
 
+extern uint8_t gLEDsCarFlag;
+
+//待处理的命令
 HandingFlag     SendOpenFlag;
 
+HandingFlag		SendLeftDoorLogFlag;
 
 AckedStruct    CoreBoardAckedData;
 AckedStruct    LeftDoorBoardAckedData;
@@ -71,6 +76,7 @@ SendDataStrct   RightDoorBoardSendDataStruct;
 NeedToAckStruct sNeedToAckStruct;
 
 
+//存放接收到数据
 static uint8_t CoreRevDataBuf[DATABUFLEN];
 static uint8_t CoreSenddataBuf[DATABUFLEN];    
 
@@ -170,7 +176,7 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
       return state;
   }
   /* 在ACK命令处理时需要对ACkCnt进行间操作，每进行一次操作进行一次减操作 */
-  
+  /* 需要添加对ACK数据的处理程序 */
   
   /* Handling Request Cmd Data */
   if(pRevData->RevOKFlag)
@@ -387,12 +393,22 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
       return state;
     }
     
-    switch((CoreBoardRevDataStruct.CmdType) & 0xF0)
-    {
+	  switch ((CoreBoardRevDataStruct.CmdType) & 0xF0)
+	  {
 	    
-    case 0xB0:sNeedToAckStruct.AckCmdCode[tempTableID] = 0xAB;
-	    if (0xB2 == CoreBoardRevDataStruct.CmdType && 0x01 == CoreBoardRevDataStruct.CmdParam)
-	    {
+	  case 0xB0:sNeedToAckStruct.AckCmdCode[tempTableID] = 0xAB;
+		  if (0xB1 == CoreBoardRevDataStruct.CmdType && 0x01 == CoreBoardRevDataStruct.CmdParam)
+		  {
+			  /*用于处理视频触发下的情况*/
+			  sNeedToAckStruct.AckCodeH[tempTableID] = 0x01;
+			  sNeedToAckStruct.DeviceType[tempTableID] = 0x01;
+			  gLEDsCarFlag = 1;
+			  Table.tab[tempTableID] = 0x02;     //处理完成
+			  Table.tabCnt++; break;	
+		  }
+		  
+		if (0xB2 == CoreBoardRevDataStruct.CmdType && 0x01 == CoreBoardRevDataStruct.CmdParam)
+		{
 		    sNeedToAckStruct.AckCodeH[tempTableID] = 0x02;
 		    sNeedToAckStruct.DeviceType[tempTableID] = 0x01;
 		    SendOpenFlag.Flag = 1;
@@ -488,9 +504,10 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
 	  if (SendOpenFlag.Flag)
 	  {
 		  DS_SendDataToLeftDoorBoard(CoreRevDataBuf, 7, 0xFFFF);
-		  DS_SendDataToRightDoorBoard(CoreRevDataBuf, 7, 0xFFFF);
-		  sNeedToAckStruct.AckCodeL[SendOpenFlag.position] = 0x00;
+		  sNeedToAckStruct.AckCodeL[SendOpenFlag.position] = 0x08;
 		  Table.tab[SendOpenFlag.position] = 0x02;
+		  SendOpenFlag.Flag = 0;
+		  gLEDsCarFlag = 0; 
 	  }
   }
   return state; 
@@ -522,6 +539,7 @@ DS_StatusTypeDef DS_HandingLeftDoorBoardRequest(void)
 		{
 			return state;
 		}
+		
 		switch ((LeftDoorBoardRevDataStruct.CmdType) & 0xF0)
 		{
 		case 0xB0:;break;
@@ -531,6 +549,8 @@ DS_StatusTypeDef DS_HandingLeftDoorBoardRequest(void)
 			{
 				sNeedToAckStruct.AckCodeH[tempTableID] = 0x02;
 				//写处理日志的标记位
+				SendLeftDoorLogFlag.Flag = 1;
+				SendLeftDoorLogFlag.position = tempTableID;
 				
 			};
 			sNeedToAckStruct.DeviceType[tempTableID] = 0x02;
@@ -542,6 +562,19 @@ DS_StatusTypeDef DS_HandingLeftDoorBoardRequest(void)
 		default:
 			break;
 			
+		}
+		//做复位处理
+		LeftDoorBoardRevDataStruct.NumberOfBytesReceived = 0;  
+		LeftDoorBoardRevDataStruct.DataLength  = 0;
+		LeftDoorBoardRevDataStruct.TotalLength = 0;
+		LeftDoorBoardRevDataStruct.RevOKFlag   = 0;
+		
+		if (SendLeftDoorLogFlag.Flag)
+		{
+			SendLeftDoorLogFlag.Flag = 0;
+			DS_SendDataToCoreBoard(LeftDoorRevDataBuf, 31, 0xFFFF);
+			sNeedToAckStruct.AckCodeL[SendLeftDoorLogFlag.position] = 0x00;
+			Table.tab[SendLeftDoorLogFlag.position] = 0x02;
 		}
 	}
 	 return state;

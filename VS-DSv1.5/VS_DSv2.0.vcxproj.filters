@@ -300,5 +300,14 @@
     <ClCompile Include="Src\ds_ProtocolLayer.c">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="Src\ds_gentlesensor.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\ds_led.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\ds_log.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

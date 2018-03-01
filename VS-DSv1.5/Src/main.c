@@ -50,13 +50,30 @@
 #include "ds_DataTransmissionLayer.h"
 #include "ds_ProtocolLayer.h"
 #include "Common.h"
-
+#include "ds_gentlesensor.h"
+#include "ds_log.h"
+#include "ds_FillLight.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+/*添加版本号，方便处理程序和后期的维修*/
+#define		CODEVERSION			0x0201			//版本号
+
+uint16_t gLogReportCnt;
+uint8_t  gLogReportFlag;
+uint8_t  gLEDsCarFlag;
+uint8_t  gCarComingFlag;
+
+uint8_t		gPWMLedFlag;
+uint8_t     gTIM5PWMFlag;
+uint8_t     gTIM5PWMCnt;
+uint16_t    gPWMValue;
+/*氛围灯设置*/
+uint16_t  gLEDCnt;
+uint8_t  gLEDFlag;
 
 /* USER CODE END PV */
 
@@ -71,6 +88,7 @@ static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN 0 */
 extern USARTRECIVETYPE     CoreBoardUsartType;
+GPIOSTATUSDETECTION gGentleSensorStatusDetection;
 /* USER CODE END 0 */
 
 int main(void)
@@ -101,20 +119,28 @@ int main(void)
   MX_DMA_Init();
   MX_ADC1_Init();
   MX_SPI1_Init();
-  MX_TIM4_Init();
-  MX_TIM5_Init();
+  MX_TIM3_Init(); 	//4ms 用在PWM补光灯
+  MX_TIM4_Init();	//0.1ms
+  MX_TIM5_Init();	//1ms
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
-  MX_TIM3_Init();
+
 
   /* Initialize interrupts */
   MX_NVIC_Init();
 
   /* USER CODE BEGIN 2 */
+	HAL_TIM_Base_Start_IT(&htim4);
+	HAL_TIM_Base_Start_IT(&htim5);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+	
+	DS_LED_Init();
+	DS_GentleSensorInit();
 	DS_CoreBoardProtocolInit();
 	DS_LeftDoorBoardProtocolInit();
 	DS_RightDoorBoardProtocolInit();
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -124,10 +150,48 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+	  
+	  /*处理来自核心板的数据*/
 	DS_HandingUartDataFromCoreBoard();
 	DS_HandingCoreBoardRequest();
+	
+	/*处理来自闸机A的数据*/
+	DS_HandingUartDataFromLeftDoorBoard();
+	DS_HandingLeftDoorBoardRequest();
+	  
 	DS_SendAckData();
-
+	  
+	/*PWM补光灯控制*/
+	if (gTIM5PWMFlag)
+	{
+		if (gPWMValue > 3800)
+		{
+		  gPWMValue = 3900;
+		}
+		DS_SetLedPwmValue(gPWMValue);
+	}
+	else
+	{
+		DS_SetLedPwmValue(0);
+	}
+	  
+	 /* 检测地感信号 */
+	 DS_GentleSensorCheck();
+	  
+	 /*上报时间到的时候，进行日志上报*/
+	if (gLogReportFlag)
+	{
+		DS_ReportLogInfo(); 
+		gLogReportFlag = 0;
+	 }
+	  
+	 /* 氛围灯控制 */
+	if (gLEDFlag)
+	{
+	  gLEDFlag = 0;
+	  DS_LEDS_TEST();
+	}
+	  
   }
   /* USER CODE END 3 */
 
@@ -226,7 +290,99 @@ static void MX_NVIC_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	/* Prevent unused argument(s) compilation warning */
+	UNUSED(htim);
+	/* NOTE : This function Should not be modified, when the callback is needed,
+	          the __HAL_TIM_PeriodElapsedCallback could be implemented in the user file
+	       */
+	/* 4ms */
+	if (htim3.Instance == htim->Instance)
+	{
+		
+	}
+	
+	/* 0.1ms */
+	if (htim4.Instance == htim->Instance)
+	{
+		/* 添加地感处理 */
+		gGentleSensorStatusDetection.GpioCurrentReadVal = HAL_GPIO_ReadPin(GentleSensor_GPIO_Port, GentleSensor_Pin);
+		if (0 == gGentleSensorStatusDetection.GpioCurrentReadVal && 0 == gGentleSensorStatusDetection.GpioLastReadVal)
+		{
+			if (0 == gGentleSensorStatusDetection.GpioCheckedFlag)
+			{
+				gGentleSensorStatusDetection.GpioFilterCnt++;
+				if (gGentleSensorStatusDetection.GpioFilterCnt > gGentleSensorStatusDetection.GpioFilterCntSum)
+				{
+					gGentleSensorStatusDetection.GpioStatusVal		= 1;
+					gGentleSensorStatusDetection.GpioFilterCnt		= 0;
+					gGentleSensorStatusDetection.GpioCheckedFlag	= 1;
+					gCarComingFlag = 1;
+					DS_UpgentleStatusInfoLog(1);
+					gPWMLedFlag = 1;
+				}
+			}
+		}
+		else
+		{
+			gGentleSensorStatusDetection.GpioCheckedFlag	= 0;
+			gGentleSensorStatusDetection.GpioFilterCnt		= 0;
+			gGentleSensorStatusDetection.GpioStatusVal		= 0;
+			gGentleSensorStatusDetection.GpioSendDataFlag	= 1;
+			gCarComingFlag = 0;
+			DS_UpgentleStatusInfoLog(0);
+			gPWMLedFlag = 0;
+		}
+		gGentleSensorStatusDetection.GpioLastReadVal = gGentleSensorStatusDetection.GpioCurrentReadVal;
+		
+		
+	}
+	
+	/* 1ms */
+	if (htim5.Instance == htim->Instance)
+	{
+		if (gGentleSensorStatusDetection.GpioValidLogicTimeCnt > 80)
+		{
+			gGentleSensorStatusDetection.GpioValidLogicTimeCnt--;
+		}
+		
+		/*上报日志 6s 一次*/
+		gLogReportCnt++;
+		if (gLogReportCnt > 5000)
+		{
+			gLogReportFlag = 1;
+			gLogReportCnt = 0;
+		}
+		
+		/*来车时每秒钟闪烁五次，无车时保持常亮*/
+		gLEDCnt++;
+		if (gLEDCnt > 200)
+		{
+			gLEDFlag = 1;
+			gLEDCnt = 0;
+		}
+		
+		/*PWM控制 */
+		gTIM5PWMCnt++;
+		if (gTIM5PWMCnt > 3)
+		{
+			if (gPWMLedFlag)
+			{
+				gPWMValue += 2;
+				gTIM5PWMFlag = 1;
+			}
+			else
+			{
+				gPWMValue = 900;
+				gTIM5PWMFlag = 0;
+          
+			}
+			gTIM5PWMCnt = 0;
+		}
+	}
+	
+}
 /* USER CODE END 4 */
 
 /**
