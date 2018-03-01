@@ -124,7 +124,7 @@ DS_StatusTypeDef DS_GentleSensorCheck(void)
 	  data[2] = 0x01;
 	  data[3] = 0x00;
 	  data[4] = 0x00;
-	  data[5] = 0xB2;
+	  data[5] = 0xB0;
 	  data[6] = 0x5D;
 	  DS_SendDataToCoreBoard(data, 7, 0xFFFF);
     /* Report the arrival of car */
