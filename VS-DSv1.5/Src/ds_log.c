@@ -62,43 +62,57 @@ static uint8_t DriverBoardInfo[10];
 //  return ret;
 //}
 
+/*温度信息*/
 void DS_UpTemInfoLog(uint16_t tTemp)
 {
     DriverBoardInfo[0] = (uint8_t)((tTemp >> 8) & 0x0F);
     DriverBoardInfo[1] = (uint8_t)tTemp;
 }
 
+/*光照度信息*/
 void DS_UpLightInfoLog(uint16_t tTemp)
 {
     DriverBoardInfo[2] = (uint8_t)((tTemp >> 8) & 0x0F);
     DriverBoardInfo[3] = (uint8_t)tTemp;
 }
 
+/*更新风扇信息*/
 void DS_UpFanStatusInfoLog(uint8_t tStatus)
 {
     DriverBoardInfo[4] = tStatus;
 }
+
+/* 补光灯信息 */
 void DS_UpFlashLightInfoLog(uint8_t tStatus)
 {
    DriverBoardInfo[5] = tStatus;
 }
+
+/* 更新地感状态信息 */
 void DS_UpgentleStatusInfoLog(uint8_t tStatus)
 {
   DriverBoardInfo[6] = tStatus;
 }
+
+/*更新氛围灯的状态信息*/
 void DS_UpAtmosphereStatusInfoLog(uint8_t tStatus)
 {
   DriverBoardInfo[7] = tStatus;
 }
+
+/* 获取道闸A的状态信息 */
 void DS_UpDoorAStatus(uint8_t tStatus)
 {
   DriverBoardInfo[8] = tStatus;
 }
+
+/*获取道闸B的状态信息*/
 void DS_UpDoorBStatus(uint8_t tStatus)
 {
   DriverBoardInfo[9] = tStatus;
 }
 
+/* 写日志上传标记位 */
 DS_StatusTypeDef DS_WriteReportLogFlag(void)
 {
   DS_StatusTypeDef status = DS_OK;
@@ -106,6 +120,7 @@ DS_StatusTypeDef DS_WriteReportLogFlag(void)
   return status;
 }
 
+/* 上传日志 */
 DS_StatusTypeDef DS_ReportLogInfo()
 {
   DS_StatusTypeDef status = DS_OK;

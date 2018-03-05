@@ -91,7 +91,7 @@ DS_StatusTypeDef DS_GentleSensorCheck(void)
 {
   DS_StatusTypeDef state = DS_OK;
   uint8_t data[8];
-	
+
   if(0 == gGentleSensorStatusDetection.GpioCheckedFlag || gGentleSensorStatusDetection.GpioValidLogicTimeCnt < 100)
   {
     /* Turn off the flash if the car leaves or if the flash blinks longer than the set value */
@@ -105,9 +105,20 @@ DS_StatusTypeDef DS_GentleSensorCheck(void)
     /* if the vehcile is still ,carry out the release operation */
     
     
-    if(gGentleSensorStatusDetection.GpioValidLogicTimeCnt < 100)
+    if(gGentleSensorStatusDetection.GpioValidLogicTimeCnt < 88500)
     {
-      /* Report vehicle timeout notification */
+      
+	    data[0] = 0x5B;
+	    data[1] = 0xB1;
+	    data[2] = 0x01;
+	    data[3] = 0x00;
+	    data[4] = 0x00;
+	    data[5] = 0xB0;
+	    data[6] = 0x5D;
+	    DS_SendDataToCoreBoard(data, 7, 0xFFFF); 
+	    
+	    /* Report vehicle timeout notification */
+	    
     }
     
   }
@@ -118,15 +129,7 @@ DS_StatusTypeDef DS_GentleSensorCheck(void)
     /* Flash open*/
 	gCarComingFlag = 1;
     gLEDsCarFlag = 1;
-    
-	  data[0] = 0x5B;
-	  data[1] = 0xB1;
-	  data[2] = 0x01;
-	  data[3] = 0x00;
-	  data[4] = 0x00;
-	  data[5] = 0xB0;
-	  data[6] = 0x5D;
-	  DS_SendDataToCoreBoard(data, 7, 0xFFFF);
+   
     /* Report the arrival of car */
 //    gCoreBoardProtocolCmd.CmdType    = 0xB1;
 //    gCoreBoardProtocolCmd.CmdParam   = 0x01;

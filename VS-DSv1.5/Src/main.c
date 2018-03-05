@@ -60,8 +60,9 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 /*添加版本号，方便处理程序和后期的维修*/
-#define		CODEVERSION			0x0201			//版本号
-
+#define		CODEVERSION				0x0201			//版本号
+#define     TEMPUTERALARMVALUE		0x04FF			//温度报警阈值
+#define     LIGHTHELPVALUE			0x04FF			//常亮补光灯阈值
 uint16_t gLogReportCnt;
 uint8_t  gLogReportFlag;
 uint8_t  gLEDsCarFlag;
@@ -71,6 +72,12 @@ uint8_t		gPWMLedFlag;
 uint8_t     gTIM5PWMFlag;
 uint8_t     gTIM5PWMCnt;
 uint16_t    gPWMValue;
+
+uint32_t  gADCBuffer[10];
+uint32_t  gTempterValue;
+uint32_t  gLightValue;
+uint32_t  gADCTimCnt;
+uint8_t   gADCTimCntFlag;
 /*氛围灯设置*/
 uint16_t  gLEDCnt;
 uint8_t  gLEDFlag;
@@ -83,7 +90,7 @@ static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+static void CheckLightAndTemperture(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -95,7 +102,6 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -134,6 +140,7 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim4);
 	HAL_TIM_Base_Start_IT(&htim5);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&gADCBuffer, 10);
 	
 	DS_LED_Init();
 	DS_GentleSensorInit();
@@ -160,6 +167,13 @@ int main(void)
 	DS_HandingLeftDoorBoardRequest();
 	  
 	DS_SendAckData();
+	  
+	/*检测温度和光照*/
+	  if (gADCTimCntFlag)
+	  {
+		  gADCTimCntFlag = 0;
+		  CheckLightAndTemperture();
+	  }
 	  
 	/*PWM补光灯控制*/
 	if (gTIM5PWMFlag)
@@ -342,6 +356,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	/* 1ms */
 	if (htim5.Instance == htim->Instance)
 	{
+		gADCTimCnt++;
+		if (gADCTimCnt > 60000)
+		{
+			gADCTimCntFlag = 1;
+			gADCTimCnt = 0;
+		}
 		if (gGentleSensorStatusDetection.GpioValidLogicTimeCnt > 80)
 		{
 			gGentleSensorStatusDetection.GpioValidLogicTimeCnt--;
@@ -380,8 +400,45 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			}
 			gTIM5PWMCnt = 0;
 		}
+	}	
+}
+
+void CheckLightAndTemperture(void)
+{
+	uint8_t i;
+	for (i = 0; i < 10;)
+	{
+		gLightValue += gADCBuffer[i++]; 
+		gTempterValue += gADCBuffer[i++];
 	}
-	
+	gLightValue /= 5;
+	gTempterValue /= 5;
+	DS_UpLightInfoLog(gLightValue);
+	DS_UpTemInfoLog(gTempterValue);
+		  
+	if (gLightValue < LIGHTHELPVALUE)
+	{
+		DS_UpFlashLightInfoLog(1);
+		/*此处添加打开灯的控制*/
+	}
+	else
+	{
+		DS_UpFlashLightInfoLog(0);
+	}
+		  
+	if (gTempterValue > TEMPUTERALARMVALUE)
+	{
+		/* 温度过高开启散热 */
+		DS_FAN_OUT_ON();
+		DS_UpFanStatusInfoLog(1);
+	}
+	else
+	{
+		/*温度正常，关闭散热*/
+		DS_FAN_OUT_OFF();
+		DS_UpFanStatusInfoLog(0);
+	} 
+	return ;
 }
 /* USER CODE END 4 */
 
