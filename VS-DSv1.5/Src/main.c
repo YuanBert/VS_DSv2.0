@@ -176,7 +176,7 @@ int main(void)
 	  }
 	  
 	/*PWM²¹¹âµÆ¿ØÖÆ*/
-	if (gTIM5PWMFlag)
+	  if (gTIM5PWMFlag && gLEDFlag)
 	{
 		if (gPWMValue > 3800)
 		{
@@ -394,7 +394,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			}
 			else
 			{
-				gPWMValue = 900;
+				gPWMValue = 1000;
 				gTIM5PWMFlag = 0;
           
 			}

@@ -51,6 +51,7 @@
 extern GPIOSTATUSDETECTION gGentleSensorStatusDetection;
 extern uint8_t gLEDsCarFlag;
 extern uint8_t gCarComingFlag;
+static uint8_t gSendFlag = 0;;
 /*******************************************************************************
 *
 *       Function        :DS_GentleSensorInit()
@@ -97,50 +98,50 @@ DS_StatusTypeDef DS_GentleSensorCheck(void)
     /* Turn off the flash if the car leaves or if the flash blinks longer than the set value */
     gLEDsCarFlag = 0;
 	gCarComingFlag = 0;
+	gSendFlag = 0;
     
   }
-  
-  if(0 == gGentleSensorStatusDetection.GpioSendDataFlag && gGentleSensorStatusDetection.GpioCheckedFlag)
-  {
-    /* if the vehcile is still ,carry out the release operation */
-    
-    
-    if(gGentleSensorStatusDetection.GpioValidLogicTimeCnt < 88500)
-    {
-      
-	    data[0] = 0x5B;
-	    data[1] = 0xB1;
-	    data[2] = 0x01;
-	    data[3] = 0x00;
-	    data[4] = 0x00;
-	    data[5] = 0xB0;
-	    data[6] = 0x5D;
-	    DS_SendDataToCoreBoard(data, 7, 0xFFFF); 
-	    
-	    /* Report vehicle timeout notification */
-	    
-    }
-    
-  }
-  
-  if(gGentleSensorStatusDetection.GpioStatusVal && gGentleSensorStatusDetection.GpioSendDataFlag)
-  {
-    gGentleSensorStatusDetection.GpioValidLogicTimeCnt = 90100;
-    /* Flash open*/
-	gCarComingFlag = 1;
-    gLEDsCarFlag = 1;
+	if (gGentleSensorStatusDetection.GpioStatusVal && gGentleSensorStatusDetection.GpioSendDataFlag)
+	{
+		gGentleSensorStatusDetection.GpioValidLogicTimeCnt = 90100;
+		/* Flash open*/
+		gCarComingFlag = 1;
+		gLEDsCarFlag = 1;
    
-    /* Report the arrival of car */
-//    gCoreBoardProtocolCmd.CmdType    = 0xB1;
-//    gCoreBoardProtocolCmd.CmdParam   = 0x01;
-//    gCoreBoardProtocolCmd.DataLength = 0x0000;
-//    gCoreBoardProtocolCmd.DataLengthLow    = 0x00;
-//    gCoreBoardProtocolCmd.DataLengthHight  = 0x00;
-//    HAL_Delay(100);
-//    state = DS_SendRequestCmdToCoreBoard(&gCoreBoardProtocolCmd);
+		/* Report the arrival of car */
+		//    gCoreBoardProtocolCmd.CmdType    = 0xB1;
+		//    gCoreBoardProtocolCmd.CmdParam   = 0x01;
+		//    gCoreBoardProtocolCmd.DataLength = 0x0000;
+		//    gCoreBoardProtocolCmd.DataLengthLow    = 0x00;
+		//    gCoreBoardProtocolCmd.DataLengthHight  = 0x00;
+		//    HAL_Delay(100);
+		//    state = DS_SendRequestCmdToCoreBoard(&gCoreBoardProtocolCmd);
+		gGentleSensorStatusDetection.GpioSendDataFlag = 0;
+	}
+	
+	if (0 == gGentleSensorStatusDetection.GpioSendDataFlag && gGentleSensorStatusDetection.GpioCheckedFlag)
+	{
+		/* if the vehcile is still ,carry out the release operation */
     
-    gGentleSensorStatusDetection.GpioSendDataFlag = 0;
-  }
+    
+		if (0 == gSendFlag && gGentleSensorStatusDetection.GpioValidLogicTimeCnt < 89500)
+		{
+      
+			data[0] = 0x5B;
+			data[1] = 0xB1;
+			data[2] = 0x01;
+			data[3] = 0x00;
+			data[4] = 0x00;
+			data[5] = 0xB0;
+			data[6] = 0x5D;
+			DS_SendDataToCoreBoard(data, 7, 0xFFFF); 
+	    
+			/* Report vehicle timeout notification */
+			gSendFlag = 1;
+	    
+		}
+		
+	}  
   return state;  
 }
 

@@ -151,7 +151,7 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
   /*  Handling the ACK Cmd */
   if(0xA0 == (*(pUsartType->RX_pData + 1) & 0xF0))
   {
-	  DS_SendDataToCoreBoard((uint8_t*)"\r\n Handling the ACK Cmd\r\n", 30, 0xFFFF);
+	  //DS_SendDataToCoreBoard((uint8_t*)"\r\n Handling the ACK Cmd\r\n", 30, 0xFFFF);
 	  if(pAckedData->AckCnt > 5)
       {
         return state;
