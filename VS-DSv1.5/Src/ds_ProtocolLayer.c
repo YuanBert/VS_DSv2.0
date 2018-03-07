@@ -167,12 +167,12 @@ static DS_StatusTypeDef DS_HandingUartData(pRevDataStruct pRevData,pAckedStruct 
         return state;
       }
       
-      pAckedData->AckCmdCode[pAckedData->AckCnt]     = *(pUsartType->RX_pData + 1);
-      pAckedData->AckCodeH[pAckedData->AckCnt]       = *(pUsartType->RX_pData + 2);
-      pAckedData->AckCodeL[pAckedData->AckCnt]       = *(pUsartType->RX_pData + 3);
-	  pAckedData->CheckedAckFlag[pAckedData->AckCnt] = 1;
-      
-      pAckedData->AckCnt++;
+//      pAckedData->AckCmdCode[pAckedData->AckCnt]     = *(pUsartType->RX_pData + 1);
+//      pAckedData->AckCodeH[pAckedData->AckCnt]       = *(pUsartType->RX_pData + 2);
+//      pAckedData->AckCodeL[pAckedData->AckCnt]       = *(pUsartType->RX_pData + 3);
+//	  pAckedData->CheckedAckFlag[pAckedData->AckCnt] = 1;
+//      
+//      pAckedData->AckCnt++;
       
       return state;
   }
