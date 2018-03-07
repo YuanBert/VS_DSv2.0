@@ -34,9 +34,10 @@
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx.h"
 #include "stm32f1xx_it.h"
-#include "ds_DataTransmissionLayer.h"
 
 /* USER CODE BEGIN 0 */
+#include "ds_DataTransmissionLayer.h"
+
 extern USARTRECIVETYPE     CoreBoardUsartType;
 extern USARTRECIVETYPE     LeftDoorBoardUsartType;
 extern USARTRECIVETYPE     RightDoorBoardUsartType;

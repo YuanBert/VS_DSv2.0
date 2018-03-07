@@ -100,6 +100,9 @@
     <Filter Include="VisualGDB settings">
       <UniqueIdentifier>{0e2de63c-401c-410d-a2e7-c3bc62d2670e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source files\BSP">
+      <UniqueIdentifier>{26af08e8-7d3b-4f3d-a0e8-7fd0dcae929b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\gpio.c">
@@ -308,6 +311,9 @@
     </ClCompile>
     <ClCompile Include="Src\ds_log.c">
       <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\W25QXX.c">
+      <Filter>Source files\BSP</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -59,6 +59,7 @@ extern uint8_t gLEDsCarFlag;
 HandingFlag     SendOpenFlag;
 
 HandingFlag		SendLeftDoorLogFlag;
+HandingFlag     SendRightDoorLogFlag;
 
 AckedStruct    CoreBoardAckedData;
 AckedStruct    LeftDoorBoardAckedData;
@@ -504,6 +505,7 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
 	  if (SendOpenFlag.Flag)
 	  {
 		  DS_SendDataToLeftDoorBoard(CoreRevDataBuf, 7, 0xFFFF);
+		  DS_SendDataToRightDoorBoard(CoreRevDataBuf, 7, 0xFFFF);
 		  sNeedToAckStruct.AckCodeL[SendOpenFlag.position] = 0x08;
 		  Table.tab[SendOpenFlag.position] = 0x02;
 		  SendOpenFlag.Flag = 0;
@@ -597,7 +599,57 @@ DS_StatusTypeDef DS_HandingLeftDoorBoardRequest(void)
 DS_StatusTypeDef DS_HandingRightDoorBoardRequest(void)
 {
 	DS_StatusTypeDef state = DS_OK;
-  
+	uint8_t tempTableID;
+	if (RightDoorBoardRevDataStruct.RevOKFlag)
+	{
+		tempTableID = GetAvailableTableID();
+		
+		if (0xFF == tempTableID)
+		{
+			return state;
+		}
+		
+		switch ((RightDoorBoardRevDataStruct.CmdType) & 0xF0)
+		{
+		case 0xB0:
+			;break;
+		case 0xC0:
+			;break;
+		case 0xD0:sNeedToAckStruct.AckCmdCode[tempTableID] = 0xAD; 
+			if (0xD2 == RightDoorBoardRevDataStruct.CmdType)
+			{
+				sNeedToAckStruct.AckCodeH[tempTableID] = 0x02;
+				//写处理日志的标记位
+				SendLeftDoorLogFlag.Flag = 1;
+				SendLeftDoorLogFlag.position = tempTableID;
+				
+			}
+			;
+			sNeedToAckStruct.DeviceType[tempTableID] = 0x03;
+			Table.tab[tempTableID] = 0x01;
+			Table.tabCnt++;
+			break;
+		case 0xE0:
+			;break;
+			
+		default:
+			break;
+			
+		}
+		//做复位处理
+		RightDoorBoardRevDataStruct.NumberOfBytesReceived = 0;  
+		RightDoorBoardRevDataStruct.DataLength  = 0;
+		RightDoorBoardRevDataStruct.TotalLength = 0;
+		RightDoorBoardRevDataStruct.RevOKFlag   = 0;
+		
+		if (SendRightDoorLogFlag.Flag)
+		{
+			SendRightDoorLogFlag.Flag = 0;
+			DS_SendDataToCoreBoard(RightDoorRevDataBuf, 31, 0xFFFF);
+			sNeedToAckStruct.AckCodeL[SendRightDoorLogFlag.position] = 0x00;
+			Table.tab[SendRightDoorLogFlag.position] = 0x02;
+		}
+	}
 	return state;
 }
 
