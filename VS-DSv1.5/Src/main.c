@@ -173,6 +173,9 @@ int main(void)
 	  
 	DS_SendAckData();
 	  
+	  /* 检测地感信号 */
+	  DS_GentleSensorCheck();
+	  
 	/*检测温度和光照*/
 	  if (gADCTimCntFlag)
 	  {
@@ -181,12 +184,13 @@ int main(void)
 	  }
 	  
 	/*PWM补光灯控制*/
-	  if (gTIM5PWMFlag && gLEDFlag)
+	  if (gCarComingFlag)
 	{
 		if (gPWMValue > 3800)
 		{
 		  gPWMValue = 3900;
 		}
+		
 		DS_SetLedPwmValue(gPWMValue);
 	}
 	else
@@ -194,8 +198,6 @@ int main(void)
 		DS_SetLedPwmValue(0);
 	}
 	  
-	 /* 检测地感信号 */
-	 DS_GentleSensorCheck();
 	  
 	 /*上报时间到的时候，进行日志上报*/
 	if (gLogReportFlag)
@@ -396,7 +398,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		gTIM5PWMCnt++;
 		if (gTIM5PWMCnt > 3)
 		{
-			if (gPWMLedFlag)
+			if (gCarComingFlag)
 			{
 				gPWMValue += 2;
 				gTIM5PWMFlag = 1;
