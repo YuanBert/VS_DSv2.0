@@ -123,7 +123,7 @@ DS_StatusTypeDef DS_GentleSensorCheck(void)
 		/* if the vehcile is still ,carry out the release operation */
     
     
-		if (0 == gSendFlag && gGentleSensorStatusDetection.GpioValidLogicTimeCnt < 85500)
+		if (0 == gSendFlag && gGentleSensorStatusDetection.GpioValidLogicTimeCnt < 89500)
 		{
       
 			data[0] = 0x5B;
