@@ -405,7 +405,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			}
 			else
 			{
-				gPWMValue = 1800;
+				gPWMValue = 1000;
 				gTIM5PWMFlag = 0;
           
 			}
